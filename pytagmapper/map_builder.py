@@ -62,7 +62,7 @@ class MapBuilder:
 
         self.huber_k = float(30)
         
-        self.camera_matrix = np.array(camera_matrix)
+        self.camera_matrix = camera_matrix
         self.inverse_pixel_cov = (1.0/10)**2
         self.tag_side_lengths = tag_side_lengths
         self.default_tag_side_length = tag_side_lengths["default"]
@@ -88,7 +88,7 @@ class MapBuilder:
         self.viewpoint_infos = []
         self.tag_infos = []
 
-        # list of (tag_idx, viewpoint_idx, tag_corners)
+        # list of (tag_idx, viewpoint_idx, camera_id, tag_corners)
         self.detections = []
 
         self.viewpoint_id_to_idx = {}
@@ -120,15 +120,19 @@ class MapBuilder:
             if tx.shape != (self.tx_world_tag_dim, self.tx_world_tag_dim):
                 raise RuntimeError("Bad dimension", tx.shape)
 
-    def add_viewpoint(self, viewpoint_id, tags, init_viewpoint = None, init_tags = None):
+    def add_viewpoint(self, viewpoint_id, camera_id, tags, init_viewpoint = None, init_tags = None):
         if init_tags is None:
             init_tags = {}
 
         self.viewpoint_id_to_idx[viewpoint_id] = len(self.viewpoint_ids)
         self.viewpoint_ids.append(viewpoint_id)
-
+        self.viewpoint_camera_id = int(camera_id)
         overlapping_tag_ids = list(
             self.tag_id_to_idx.keys() & tags.keys())
+        for camera in self.camera_matrix:
+            if self.viewpoint_camera_id == camera["cam_id"]:
+                _camera_matrix = camera["camera_matrix"]
+                break
 
         if init_viewpoint is None:
             if not overlapping_tag_ids:
@@ -169,7 +173,7 @@ class MapBuilder:
 
                 tags_world_coords = np.vstack(tags_world_coords)
                 tags_img_coords = np.vstack(tags_img_coords)
-                tx_camera_world = solvePnPWrapper(tags_world_coords, tags_img_coords, self.camera_matrix)
+                tx_camera_world = solvePnPWrapper(tags_world_coords, tags_img_coords, _camera_matrix)
                 init_viewpoint = SE3_inv(tx_camera_world)
 
         # initialize the tag positions
@@ -179,7 +183,7 @@ class MapBuilder:
             detection = tags[tag_id]
             detection = np.array(detection).reshape((4,2))
             corners_mat = np.array(get_corners_mat(self.get_tag_side_length(tag_id))[:3,:].T)
-            tx_camera_tag = solvePnPWrapper(corners_mat, detection, self.camera_matrix)
+            tx_camera_tag = solvePnPWrapper(corners_mat, detection, _camera_matrix)
             tx_world_tag_3d = init_viewpoint @ tx_camera_tag
 
             if self.map_type == '2d':
@@ -215,7 +219,7 @@ class MapBuilder:
             tag_idx = self.tag_id_to_idx[tag_id]
 
             dim_detection_factor_input = 6 + self.tag_dof
-            self.detections.append((tag_idx, viewpoint_idx, np.reshape(tag_corners, (8,1))))
+            self.detections.append((tag_idx, viewpoint_idx, self.viewpoint_camera_id, np.reshape(tag_corners, (8,1))))
             self.detection_jacobians.append(np.zeros(shape=(8,dim_detection_factor_input)))
             self.detection_projections.append(np.zeros(shape=(8,1)))
             self.detection_residuals.append(np.zeros(shape=(8,1)))
@@ -297,14 +301,20 @@ class MapBuilder:
 
     def relinearize_detection(self, det_idx):
         detection = self.detections[det_idx]
-        tag_idx, viewpoint_idx, tag_corners = detection
+        tag_idx, viewpoint_idx, camera_id, tag_corners = detection
         tx_world_tag = self.txs_world_tag[tag_idx]
         if self.map_type == "2d":
             tx_world_tag = SE2_to_SE3(tx_world_tag)
 
         tx_world_viewpoint = self.txs_world_viewpoint[viewpoint_idx]
         tx_viewpoint_tag = SE3_inv(tx_world_viewpoint) @ tx_world_tag
-        image_corners, dimage_corners_dcamera, dimage_corners_dtag = project(self.camera_matrix, tx_viewpoint_tag, self.corners_mats[tag_idx])
+
+        for camera in self.camera_matrix:
+            if camera_id == camera["cam_id"]:
+                _camera_matrix = camera["camera_matrix"]
+                break
+        
+        image_corners, dimage_corners_dcamera, dimage_corners_dtag = project(_camera_matrix, tx_viewpoint_tag, self.corners_mats[tag_idx])
         self.detection_jacobians[det_idx][:,:6] = dimage_corners_dcamera
         if self.map_type == "2d":
             self.detection_jacobians[det_idx][:,6+0] = dimage_corners_dtag[:,2] # wz
@@ -439,15 +449,15 @@ class MapBuilder:
         return True
 
     def send_detection_to_viewpoint_msgs(self):
-        for detection_idx, (tag_idx, viewpoint_idx, _) in enumerate(self.detections):
+        for detection_idx, (tag_idx,  viewpoint_idx, _, _) in enumerate(self.detections):
             self.send_detection_to_viewpoint_msg(detection_idx)
 
     def send_detection_to_tag_msgs(self):
-        for detection_idx, (tag_idx, viewpoint_idx, _) in enumerate(self.detections):
+        for detection_idx, (tag_idx, viewpoint_idx, _, _) in enumerate(self.detections):
             self.send_detection_to_tag_msg(detection_idx)
 
     def send_detection_to_viewpoint_msg(self, detection_idx):
-        tag_idx, viewpoint_idx, _ = self.detections[detection_idx]
+        tag_idx, viewpoint_idx, _, _ = self.detections[detection_idx]
 
         # detection to camera message
         #            __[ detectionA ]________
@@ -524,7 +534,7 @@ class MapBuilder:
 
 
     def send_detection_to_tag_msg(self, detection_idx):
-        tag_idx, viewpoint_idx, _ = self.detections[detection_idx]
+        tag_idx, viewpoint_idx, _ , _= self.detections[detection_idx]
 
         # detection to camera message
         #              [ detectionA ]________

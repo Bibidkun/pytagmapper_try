@@ -186,31 +186,40 @@ def load_tag_side_length(data_dir = "data"):
 
 def load_data(data_dir = "data"):
     data = {
-        'viewpoints': {},
-        'camera_matrix': None,
-        'tag_side_length': None
+        'viewpoints': {}, # viewpoint_id -> {cam_id, tags}
+        'camera_matrix': None, # -> {cam_id, camera_matrix}
+        'tag_side_lengths': None
     }
+    if os.path.exists(get_path(data_dir, "config.json")):
+        with open(get_path(data_dir, "config.json"), 'r') as f:
+            config = json.load(f)
+        for camera in config['cameras']:
+            camera['camera_matrix'] = np.array(camera['camera_matrix'])
+        data['camera_matrix'] = config['cameras']
+        data['tag_side_lengths'] = config['tag_side_lengths']
+    else:
+        data['camera_matrix'] = load_camera_matrix(data_dir)
 
-    data['camera_matrix'] = load_camera_matrix(data_dir)
+        tag_side_lengths = load_tag_side_length(data_dir)
+        data['tag_side_length'] = tag_side_lengths["default"] # to be deprecated
+        data['tag_side_lengths'] = tag_side_lengths
 
-    tag_side_lengths = load_tag_side_length(data_dir)
-    data['tag_side_length'] = tag_side_lengths["default"] # to be deprecated
-    data['tag_side_lengths'] = tag_side_lengths
-
-    for file_path in glob.glob(os.path.join(data_dir, "tags_*.txt")):
+    for file_path in glob.glob(os.path.join(data_dir, "tags_*_*.txt")):
         file_name = os.path.splitext(os.path.split(file_path)[-1])[0]
         file_id = file_name.split("_")[-1].strip()
+        cam_id = file_name.split("_")[-2].strip()
         with open(file_path, "r") as f:
-            data['viewpoints'][file_id] = parse_tag_file(f)
+            data['viewpoints'][file_id] = {"cam_id": cam_id, "tags": parse_tag_file(f)}
 
     return data
 
 def get_image_paths(data_dir = "data"):
     image_paths = {}
-    for file_path in glob.glob(os.path.join(data_dir, "image_*.png")):
+    for file_path in glob.glob(os.path.join(data_dir, "image_*_*.png")):
         file_name = os.path.splitext(os.path.split(file_path)[-1])[0]
         file_id = file_name.split("_")[-1].strip()
-        image_paths[file_id] = file_path
+        cam_id = file_name.split("_")[-2].strip()
+        image_paths[file_id] = [file_path, cam_id]
     return image_paths
 
 def load_images(data_dir = "data"):

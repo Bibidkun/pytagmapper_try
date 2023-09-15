@@ -21,9 +21,10 @@ def solvePnPWrapper(obj_points, img_points, camera_matrix):
     return tx_camera_obj
 
 def add_viewpoint(source_data, viewpoint_id, map_builder, total_viewpoints):
-    viewpoint = source_data['viewpoints'][viewpoint_id]
+    view_camera_id = source_data['viewpoints'][viewpoint_id]['cam_id']
+    viewpoint = source_data['viewpoints'][viewpoint_id]["tags"]
 
-    map_builder.add_viewpoint(viewpoint_id,
+    map_builder.add_viewpoint(viewpoint_id, view_camera_id,
                               viewpoint)
 
     map_builder.relinearize()
@@ -76,8 +77,8 @@ if __name__ == "__main__":
     best_viewpoint = 0
     best_num_tags = -1
     for viewpoint_id in viewpoint_ids:
-        if len(viewpoints[viewpoint_id]) > best_num_tags:
-            best_num_tags = len(viewpoints[viewpoint_id])
+        if len(viewpoints[viewpoint_id]["tags"]) > best_num_tags:
+            best_num_tags = len(viewpoints[viewpoint_id]["tags"])
             best_viewpoint = viewpoint_id
 
     # print("best viewpoint was ", best_viewpoint)
@@ -87,8 +88,8 @@ if __name__ == "__main__":
                              scene_data['tag_side_lengths'],
                              args.mode)
 
-    map_builder.add_viewpoint(best_viewpoint,
-                              scene_data['viewpoints'][best_viewpoint])
+    map_builder.add_viewpoint(best_viewpoint, scene_data['viewpoints'][best_viewpoint]["cam_id"],
+                              scene_data['viewpoints'][best_viewpoint]["tags"])
     map_builder.relinearize()
     used_viewpoints.add(best_viewpoint)
 
@@ -101,7 +102,7 @@ if __name__ == "__main__":
         for viewpoint_id in viewpoint_ids:
             if viewpoint_id in used_viewpoints:
                 continue
-            overlap = viewpoints[viewpoint_id].keys() & map_builder.tag_id_to_idx.keys()
+            overlap = viewpoints[viewpoint_id]["tags"].keys() & map_builder.tag_id_to_idx.keys()
             if len(overlap) > len(best_overlap):
                 best_overlap = overlap
                 best_viewpoint = viewpoint_id

@@ -11,8 +11,9 @@ def main():
     args = parser.parse_args()
     
     image_paths = get_image_paths(args.image_dir)
-    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_ARUCO_ORIGINAL)
-    aruco_params = cv2.aruco.DetectorParameters_create()
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+    
+    aruco_params = cv2.aruco.DetectorParameters()
 
     # BGR format
     aruco_side_colors = [(0, 0, 255),
@@ -20,12 +21,13 @@ def main():
                          (255, 0, 0),
                          (0, 255, 255)]
 
-    for file_id, image_path in image_paths.items():
+    for file_id, image_path_and_id in image_paths.items():
+        image_path, cam_id = image_path_and_id[0], image_path_and_id[1]
         image = cv2.imread(image_path)
         aruco_corners, aruco_ids, aruco_rejected = \
             cv2.aruco.detectMarkers(image, aruco_dict, parameters=aruco_params)
 
-        with open(os.path.join(args.image_dir, f"tags_{file_id}.txt"), "w") as f:
+        with open(os.path.join(args.image_dir, f"tags_{cam_id}_{file_id}.txt"), "w") as f:
             for tag_idx, tag_id in enumerate(aruco_ids):
                 tag_id = tag_id[0]
                 acorners = aruco_corners[tag_idx][0]
