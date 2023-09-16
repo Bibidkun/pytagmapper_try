@@ -10,16 +10,6 @@ import sys
 import cv2
 import numpy as np
 
-def solvePnPWrapper(obj_points, img_points, camera_matrix):
-    succ, rvec, tvec = cv2.solvePnP(obj_points, img_points, camera_matrix, None)
-    if not succ:
-        raise RuntimeError("solvePnP failed")
-    rot, _ = cv2.Rodrigues(rvec)
-    tx_camera_obj = np.eye(4, dtype=np.float64)
-    tx_camera_obj[:3,:3] = rot
-    tx_camera_obj[:3,3:4] = tvec
-    return tx_camera_obj
-
 def add_viewpoint(source_data, viewpoint_id, map_builder, total_viewpoints):
     view_camera_id = source_data['viewpoints'][viewpoint_id]['cam_id']
     viewpoint = source_data['viewpoints'][viewpoint_id]["tags"]

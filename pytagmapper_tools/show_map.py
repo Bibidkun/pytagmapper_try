@@ -17,6 +17,7 @@ def main():
     tag_side_lengths = map_data['tag_side_lengths']
 
     map_type = map_data['map_type']
+    view_points_data = load_viewpoints(args.map_dir)
 
     # 2 and 2.5d maps
     if map_type == '2.5d' or map_type == '2d':
@@ -72,6 +73,19 @@ def main():
 
             z = "{:#.4g}".format(tx_world_tag[2,3])
             plt.text(center[0], center[1] - tag_side_length/2, f"z={z}")
+        for cam_id, cam_pos in view_points_data.items():
+            # rot = cam_pos[:3, :3]
+            # tvec = cam_pos[:3, 3:4]
+            # # ベクトルの定義を変更する
+            # R_raw = rot.T
+            # t_raw = -R_raw @ tvec
+            
+            # pos = t_raw.T[0]
+            pos = cam_pos[:3, 3]
+            plt.plot(pos[0], pos[1], 'bo')
+            plt.text(pos[0], pos[1]-5, str(cam_id))
+            z = "{:#.4g}".format(pos[2])
+            plt.text(pos[0] + 0.5, pos[1] - 0.5, f"z={z}")
     else:
         raise RuntimeError("Unsupported map type", map_type)
         
