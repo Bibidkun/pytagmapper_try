@@ -195,6 +195,7 @@ def load_data(data_dir = "data"):
             config = json.load(f)
         for camera in config['cameras']:
             camera['camera_matrix'] = np.array(camera['camera_matrix'])
+            camera['distortion_coefficients'] = np.array(camera['distortion_coefficients'])
         data['camera_matrix'] = config['cameras']
         data['tag_side_lengths'] = config['tag_side_lengths']
     else:

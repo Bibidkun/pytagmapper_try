@@ -6,8 +6,12 @@ from pytagmapper.project import project, get_corners_mat
 from pytagmapper.heuristics import *
 import cv2
 
-def solvePnPWrapper(obj_points, img_points, camera_matrix):
-    succ, rvec, tvec = cv2.solvePnP(obj_points, img_points, camera_matrix, None)
+def solvePnPWrapper(obj_points, img_points, camera_matrix, distortion):
+    succ, rvec, tvec = cv2.solvePnP(obj_points, img_points, camera_matrix, distortion, cv2.SOLVEPNP_IPPE)
+    # succ, rvec, tvec = cv2.solvePnP(obj_points, img_points, camera_matrix, distortion)
+    # カメラ座標における，マップ原点の位置
+    # ワールド座標系における，カメラの位置は，-R^T * tvec
+
     if not succ:
         raise RuntimeError("solvePnP failed")
     rot, _ = cv2.Rodrigues(rvec)
@@ -132,7 +136,9 @@ class MapBuilder:
         for camera in self.camera_matrix:
             if self.viewpoint_camera_id == camera["cam_id"]:
                 _camera_matrix = camera["camera_matrix"]
+                _distortion = camera["distortion_coefficients"]
                 break
+        
 
         if init_viewpoint is None:
             if not overlapping_tag_ids:
@@ -173,17 +179,18 @@ class MapBuilder:
 
                 tags_world_coords = np.vstack(tags_world_coords)
                 tags_img_coords = np.vstack(tags_img_coords)
-                tx_camera_world = solvePnPWrapper(tags_world_coords, tags_img_coords, _camera_matrix)
-                init_viewpoint = SE3_inv(tx_camera_world)
+                tx_camera_world = solvePnPWrapper(tags_world_coords, tags_img_coords, _camera_matrix, _distortion)
+                init_viewpoint = SE3_inv(tx_camera_world) # world to camera coords
 
         # initialize the tag positions
         new_tag_ids = list((tags.keys() - self.tag_id_to_idx.keys()) - init_tags.keys())
         for tag_id in new_tag_ids:
-            # print("initializing tag", tag_id)
+            print("initializing tag", tag_id)
             detection = tags[tag_id]
             detection = np.array(detection).reshape((4,2))
             corners_mat = np.array(get_corners_mat(self.get_tag_side_length(tag_id))[:3,:].T)
-            tx_camera_tag = solvePnPWrapper(corners_mat, detection, _camera_matrix)
+            tx_camera_tag = solvePnPWrapper(corners_mat, detection, _camera_matrix, _distortion) # カメラ座標系の原点位置
+            print(SE3_inv(tx_camera_tag))
             tx_world_tag_3d = init_viewpoint @ tx_camera_tag
 
             if self.map_type == '2d':

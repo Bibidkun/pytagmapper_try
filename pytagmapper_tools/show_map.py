@@ -1,14 +1,25 @@
+from collections import OrderedDict
 from hack_sys_path import *
-
-from pytagmapper.data import *
-from pytagmapper.geometry import *
-from pytagmapper.project import *
 import argparse
 import math
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pytagmapper.data import *
+from pytagmapper.geometry import *
+from pytagmapper.project import *
+from pytagmapper.map_builder import solvePnPWrapper
+
+def preparate_data():
+    pass
+
+# def estimate_camera_view_points():
+#     tx_camera_world = solvePnPWrapper(tags_world_coords, tags_img_coords, _camera_matrix, _distortion)
+#     camera_view_point = SE3_inv(tx_camera_world)
+#     return camera_view_point
+
 def main():
+
     parser = argparse.ArgumentParser(description='Plot a tag map.')
     parser.add_argument('map_dir', type=str, help='map directory')
     args = parser.parse_args()
@@ -17,8 +28,12 @@ def main():
     tag_side_lengths = map_data['tag_side_lengths']
 
     map_type = map_data['map_type']
+    map_data['tag_locations'] = OrderedDict(sorted(map_data['tag_locations'].items()))
     view_points_data = load_viewpoints(args.map_dir)
-
+    # 2dのポイント座標，カメラ行列を取得
+    scene_data = load_data(args.map_dir)
+    # 3dのポイント座標を取得
+    tag_corners_world = {}
     # 2 and 2.5d maps
     if map_type == '2.5d' or map_type == '2d':
         for tag_id, pose_world_tag in map_data['tag_locations'].items():
@@ -67,29 +82,28 @@ def main():
                 y2 = world_corners[1,(i+1)%4]
                 line = plt.Line2D((x1,x2), (y1,y2), lw=1.5)
                 plt.gca().add_line(line)
+            print(world_corners.copy()[:2,:].T)
+            tag_corners_world[tag_id] = world_corners.copy()[:2,:].T # 3dの座標
 
             center = np.sum(world_corners, axis=1)/4
             plt.text(center[0], center[1], str(tag_id))
 
             z = "{:#.4g}".format(tx_world_tag[2,3])
             plt.text(center[0], center[1] - tag_side_length/2, f"z={z}")
-        for cam_id, cam_pos in view_points_data.items():
-            # rot = cam_pos[:3, :3]
-            # tvec = cam_pos[:3, 3:4]
-            # # ベクトルの定義を変更する
-            # R_raw = rot.T
-            # t_raw = -R_raw @ tvec
-            
-            # pos = t_raw.T[0]
-            pos = cam_pos[:3, 3]
-            plt.plot(pos[0], pos[1], 'bo')
-            plt.text(pos[0], pos[1]-5, str(cam_id))
-            z = "{:#.4g}".format(pos[2])
-            plt.text(pos[0] + 0.5, pos[1] - 0.5, f"z={z}")
+        # for cam_id, cam_pos in view_points_data.items():
+        #     pos = cam_pos[:3, 3]
+        #     plt.plot(pos[0], pos[1], 'bo')
+        #     plt.text(pos[0], pos[1]-5, str(cam_id))
+        #     z = "{:#.4g}".format(pos[2])
+        #     plt.text(pos[0] + 0.5, pos[1] - 0.5, f"z={z}")
     else:
         raise RuntimeError("Unsupported map type", map_type)
+    
+    tags_world_coords = np.vstack(tag_corners_world.values()) # id順に並べた3dの座標
+    for cam_point, mat_corners in scene_data['viewpoints'].values():
+        mat_corners = OrderedDict(sorted(mat_corners.items()))
+        corners_2d = np.vstack(cam_point.values())
         
-
     plt.axis('scaled')
     plt.show()
 

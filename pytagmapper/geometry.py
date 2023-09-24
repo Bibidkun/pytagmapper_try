@@ -175,9 +175,10 @@ def SE3_adj(SE3):
 
 def SE3_inv(SE3):
     result = np.empty((4,4))
-    result[:3,:3] = SE3[:3,:3].T
-    result[:3,3:4] = -SE3[:3,:3].T @ SE3[:3,3:4]
+    result[:3,:3] = SE3[:3,:3].T # rotation
+    result[:3,3:4] = -SE3[:3,:3].T @ SE3[:3,3:4] # ワールド座標系のカメラ位置
     result[3,:] = [0, 0, 0, 1]
+    
     return result
 
 def fix_SE3(SE3):

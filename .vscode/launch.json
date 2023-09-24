@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "pytagmapper_tools/build_map.py",
             "console": "integratedTerminal",
-            "args": ["camera1"],
+            "args": ["camera1", "--mode", "3d"],
             "justMyCode": true
         },
         {
@@ -21,6 +21,15 @@
             "console": "integratedTerminal",
             "args": ["camera1", "--show-detections"],
             "justMyCode": true
-        }
+        },
+        {
+            "name": "run show_map.py",
+            "type": "python",
+            "request": "launch",
+            "program": "pytagmapper_tools/show_map.py",
+            "console": "integratedTerminal",
+            "args": ["camera1"],
+            "justMyCode": true
+        },
     ]
 }
