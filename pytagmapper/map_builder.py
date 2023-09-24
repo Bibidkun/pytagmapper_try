@@ -7,7 +7,10 @@ from pytagmapper.heuristics import *
 import cv2
 
 def solvePnPWrapper(obj_points, img_points, camera_matrix, distortion):
-    succ, rvec, tvec = cv2.solvePnP(obj_points, img_points, camera_matrix, distortion, cv2.SOLVEPNP_IPPE)
+    print(obj_points.shape)
+    print(img_points.shape)
+    succ, rvec, tvec = cv2.solvePnP(obj_points, img_points, camera_matrix, None, cv2.SOLVEPNP_IPPE)
+    # 補正していない画像を使用する際は，distortionに係数を入れる必要があるが，補正した場合は，Noneを入れる
     # succ, rvec, tvec = cv2.solvePnP(obj_points, img_points, camera_matrix, distortion)
     # カメラ座標における，マップ原点の位置
     # ワールド座標系における，カメラの位置は，-R^T * tvec

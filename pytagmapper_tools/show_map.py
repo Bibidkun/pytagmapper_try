@@ -86,18 +86,21 @@ def main():
                 plt.gca().add_line(line)
             # print(world_corners.copy()[:2,:].T)
             tag_corners_world[tag_id] = world_corners.copy()[:2,:].T # 3dの座標
+            dummy_col = np.zeros((4,1))
+            tag_corners_world[tag_id] = np.hstack([tag_corners_world[tag_id], dummy_col]) # 同一平面のためz=0とする
 
             center = np.sum(world_corners, axis=1)/4
             plt.text(center[0], center[1], str(tag_id))
 
             z = "{:#.4g}".format(tx_world_tag[2,3])
             plt.text(center[0], center[1] - tag_side_length/2, f"z={z}")
-        # for cam_id, cam_pos in view_points_data.items():
-        #     pos = cam_pos[:3, 3]
-        #     plt.plot(pos[0], pos[1], 'bo')
-        #     plt.text(pos[0], pos[1]-5, str(cam_id))
-        #     z = "{:#.4g}".format(pos[2])
-        #     plt.text(pos[0] + 0.5, pos[1] - 0.5, f"z={z}")
+        # このプログラムでのカメラの位置をプロット
+        for cam_id, cam_pos in view_points_data.items():
+            pos = cam_pos[:3, 3]
+            plt.plot(pos[0], pos[1], 'bo')
+            plt.text(pos[0], pos[1]-0.5, str(cam_id))
+            z = "{:#.4g}".format(pos[2])
+            plt.text(pos[0] + 0.5, pos[1] - 0.5, f"z={z}")
     else:
         raise RuntimeError("Unsupported map type", map_type)
     
@@ -106,10 +109,17 @@ def main():
         cam_id, tags = cam_view["cam_id"], OrderedDict(sorted(cam_view["tags"].items()))
         array = np.vstack([np.array(tag_corner).reshape(4,2) for tag_corner in tags.values()])
         
-        camera_world_coords  = estimate_camera_view_points(tags_world_coords, np.vstack(tags.values()), scene_data['camera_matrix'][int(cam_id)])
+        camera_world_coords  = estimate_camera_view_points(tags_world_coords, array, scene_data['camera_matrix'][int(cam_id)])
         print(f"cam_id: {cam_id}")
         print(camera_world_coords)
-        
+        # 違う方法でカメラの位置を推定
+        pos = camera_world_coords[:3, 3]
+        plt.plot(pos[0], pos[1], 'ro')
+        plt.text(pos[0], pos[1]-5, str(cam_id))
+        z = "{:#.4g}".format(pos[2])
+        plt.text(pos[0] + 0.5, pos[1] - 0.5, f"z={z}")
+    
+
     plt.axis('scaled')
     plt.show()
 
