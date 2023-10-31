@@ -216,7 +216,7 @@ def load_data(data_dir = "data"):
 
 def get_image_paths(data_dir = "data"):
     image_paths = {}
-    for file_path in glob.glob(os.path.join(data_dir, "image_*_*.png")):
+    for file_path in glob.glob(os.path.join(data_dir, "image_*_*.jpg")):
         file_name = os.path.splitext(os.path.split(file_path)[-1])[0]
         file_id = file_name.split("_")[-1].strip()
         cam_id = file_name.split("_")[-2].strip()

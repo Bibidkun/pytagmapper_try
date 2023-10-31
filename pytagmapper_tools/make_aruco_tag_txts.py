@@ -26,6 +26,11 @@ def main():
         image = cv2.imread(image_path)
         aruco_corners, aruco_ids, aruco_rejected = \
             cv2.aruco.detectMarkers(image, aruco_dict, parameters=aruco_params)
+        
+        camera_matrix = [[1.27368947e+03, 0, 9.64119740e+02],
+            [0.00000000e+00, 1.27512097e+03, 5.28344898e+02],
+            [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]]
+        revecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(aruco_corners, 0.60, camera_matrix,None)
 
         with open(os.path.join(args.image_dir, f"tags_{cam_id}_{file_id}.txt"), "w") as f:
             for tag_idx, tag_id in enumerate(aruco_ids):

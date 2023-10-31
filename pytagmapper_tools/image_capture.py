@@ -159,6 +159,7 @@ def main():
                 aruco_dict,
                 parameters=aruco_params)
             aruco_ids = aruco_ids if aruco_ids is not None else [] # aruco_ids is sometimes annoyingly None
+            
         else:
             ctx.image = empty_image
             aruco_ids = []

@@ -112,7 +112,7 @@ def main():
         camera_world_coords  = estimate_camera_view_points(tags_world_coords, array, scene_data['camera_matrix'][int(cam_id)])
         print(f"cam_id: {cam_id}")
         print(camera_world_coords)
-        # 違う方法でカメラの位置を推定
+        # solvePnPで一括カメラの位置を推定(赤色)
         pos = camera_world_coords[:3, 3]
         plt.plot(pos[0], pos[1], 'ro')
         plt.text(pos[0], pos[1]-5, str(cam_id))
